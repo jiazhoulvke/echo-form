@@ -83,21 +83,7 @@ type userInfo struct {
 }
 
 func main() {
-	var user = userInfo{
-		UserName:  "jiazhoulvke",
-		Password:  "abcdefg1234567890abcdefg1234567890",
-		EnName:    "foobar",
-		Age:       24,
-		Weight:    100.123,
-		StrAge:    "24",
-		StrWeight: "100.123",
-		LastIP:    "127.0.0.1",
-		Email:     "jiazhoulvke+1984@gmail.com",
-		Mobile:    "13812345678",
-		Tel:       "07012345678",
-		Phone:     "13812345678",
-		IDCard:    "43214321432143211X",
-	}
+	var user = userInfo{}
 	e := echo.New()
 	e.POST("/", func(ctx echo.Context) error {
 		if err := form.Check(ctx, &user); err != nil {
