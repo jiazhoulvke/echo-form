@@ -107,7 +107,7 @@ func IsIPv4(str string) bool {
 	return ipv4Pattern.MatchString(str)
 }
 
-var mobilePattern = regexp.MustCompile(`^((\+86)|(86))?(1(([35][0-9])|[8][0-9]|[7][06789]|[4][579]))\d{8}$`)
+var mobilePattern = regexp.MustCompile(`^((\+86)|(86))?(1(([35][0-9])|[8][0-9]|[7][056789]|[4][579]))\d{8}$`)
 
 //IsMobile 是否为手机号码
 func IsMobile(str string) bool {
