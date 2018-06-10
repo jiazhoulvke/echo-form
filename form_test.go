@@ -221,6 +221,13 @@ func TestCheck(t *testing.T) {
 		}
 	})
 
+	Convey("测试手机号码", t, func() {
+		mobiles := []string{"13412345678", "19912345678", "17512345678", "13812345678"}
+		for _, mobile := range mobiles {
+			So(IsMobile(mobile), ShouldBeTrue)
+		}
+	})
+
 	Convey("测试多重struct", t, func() {
 		var b = baz{}
 		var err error
