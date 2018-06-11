@@ -26,6 +26,7 @@ func init() {
 		"email":        Email,
 		"ipv4":         IPv4,
 		"mobile":       Mobile,
+		"mobile2":      Mobile2,
 		"tel":          Tel,
 		"phone":        Phone,
 		"idcard":       IDCard,
@@ -267,6 +268,17 @@ func Mobile(ctx Context) error {
 		return nil
 	}
 	if !IsMobile(ctx.Input) {
+		return fmt.Errorf("%s必须为正确的手机号码", ctx.Title)
+	}
+	return nil
+}
+
+//Mobile2 必须为手机号码
+func Mobile2(ctx Context) error {
+	if ctx.Input == "" {
+		return nil
+	}
+	if !IsMobile2(ctx.Input) {
 		return fmt.Errorf("%s必须为正确的手机号码", ctx.Title)
 	}
 	return nil

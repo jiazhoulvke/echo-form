@@ -114,6 +114,13 @@ func IsMobile(str string) bool {
 	return mobilePattern.MatchString(str)
 }
 
+var mobilePattern2 = regexp.MustCompile(`^1\d{10}$`)
+
+//IsMobile2 判断是否为手机号，由于目前新开通的号段越来越多，所以干脆只判断首位为1、总长度为11
+func IsMobile2(str string) bool {
+	return mobilePattern2.MatchString(str)
+}
+
 var telPattern = regexp.MustCompile(`^(0\d{2,3}(\-)?)?\d{7,8}$`)
 
 //IsTel 是否为座机号码
