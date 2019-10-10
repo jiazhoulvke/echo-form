@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	. "github.com/smartystreets/goconvey/convey"
@@ -50,6 +51,7 @@ type foo struct {
 	Height      float64 `valid:"max:2.5"`
 	Count       uint64
 	IsMan       bool
+	Birthday    time.Time `valid:"required"`
 }
 
 type bar struct {
@@ -308,8 +310,11 @@ func TestBind(t *testing.T) {
 			"Height":      []string{"1.89"},
 			"Count":       []string{"66666"},
 			"IsMan":       []string{"yes"},
+			"Birthday":    []string{"2007-12-13"},
 		}
 		ctx = makeContext(data)
+		birthday, err := time.Parse("2006-01-02", "2007-12-13")
+		So(err, ShouldBeNil)
 		var a = foo{
 			ID:          1234,
 			UserName:    "jiazhoulvke",
@@ -328,6 +333,7 @@ func TestBind(t *testing.T) {
 			Height:      1.89,
 			Count:       66666,
 			IsMan:       true,
+			Birthday:    birthday,
 		}
 		err = Bind(ctx, &f)
 		So(err, ShouldBeNil)

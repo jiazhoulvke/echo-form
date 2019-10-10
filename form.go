@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -50,7 +51,11 @@ func bindStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		value := v.Field(i)
-		if field.Type.Kind() == reflect.Struct {
+		typeName := ""
+		if value.CanInterface() {
+			typeName = reflect.TypeOf(value.Interface()).String()
+		}
+		if field.Type.Kind() == reflect.Struct && typeName != "time.Time" {
 			if err := bindStruct(field.Type, value, ctx); err != nil {
 				return err
 			}
@@ -63,10 +68,19 @@ func bindStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
 	return nil
 }
 
+const (
+	dateLayout = "2006-01-02"
+	timeLayout = "2006-01-02 15:04:05"
+)
+
 func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 	title := defaultField(f, LabelFields)
 	input := ctx.FormValue(defaultField(f, FormFields))
+	typeName := reflect.TypeOf(v.Interface()).String()
 	if input == "" {
+		return nil
+	}
+	if !v.CanSet() {
 		return nil
 	}
 	if IsIntType(f) {
@@ -163,6 +177,25 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 		v.SetString(input)
 	} else if f.Type.Kind() == reflect.Bool {
 		v.SetBool(true) //凡是有值的皆为真
+	} else if typeName == "time.Time" {
+		var t time.Time
+		//如果是纯数字则认为是时间戳
+		n, err := strconv.ParseInt(input, 10, 64)
+		if err == nil {
+			t = time.Unix(n, 0)
+		} else {
+			if len(input) == 10 {
+				t, err = time.Parse(dateLayout, input)
+			} else if len(input) == 19 {
+				t, err = time.Parse(timeLayout, input)
+			} else {
+				err = fmt.Errorf("格式错误")
+			}
+			if err != nil {
+				return err
+			}
+		}
+		v.Set(reflect.ValueOf(t))
 	}
 	return nil
 }
