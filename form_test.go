@@ -34,24 +34,26 @@ func goodData() url.Values {
 }
 
 type foo struct {
-	ID          uint    `valid:"max:10"`
-	UserName    string  `form:"username" title:"用户名" valid:"required;range:8,16;username"`
-	Age         int     `form:"age" label:"年龄" valid:"integer;range:18,60"`
-	Weight      float32 `form:"weight" title:"体重" valid:"float;min:50;max:80"`
-	EnglishName string  `valid:"alpha"`
-	Number      string  `valid:"required;numeric"`
-	AliasName   string  `valid:"alphanumeric"`
-	AliasName2  string  `valid:"alphadash"`
-	Email       string  `valid:"email"`
-	LastIP      string  `valid:"ipv4"`
-	Mobile      string  `valid:"mobile"`
-	Tel         string  `valid:"tel"`
-	Phone       string  `valid:"phone"`
-	IDCard      string  `valid:"idcard"`
-	Height      float64 `valid:"max:2.5"`
-	Count       uint64
-	IsMan       bool
-	Birthday    time.Time `valid:"required"`
+	ID            uint    `valid:"max:10"`
+	UserName      string  `form:"username" title:"用户名" valid:"required;range:8,16;username"`
+	Age           int     `form:"age" label:"年龄" valid:"integer;range:18,60"`
+	Weight        float32 `form:"weight" title:"体重" valid:"float;min:50;max:80"`
+	EnglishName   string  `valid:"alpha"`
+	Number        string  `valid:"required;numeric"`
+	AliasName     string  `valid:"alphanumeric"`
+	AliasName2    string  `valid:"alphadash"`
+	Email         string  `valid:"email"`
+	LastIP        string  `valid:"ipv4"`
+	Mobile        string  `valid:"mobile"`
+	Tel           string  `valid:"tel"`
+	Phone         string  `valid:"phone"`
+	IDCard        string  `valid:"idcard"`
+	Height        float64 `valid:"max:2.5"`
+	Count         uint64
+	IsMan         bool
+	Birthday      time.Time `valid:"required"`
+	DefaultString string    `default:"foobar"`
+	DefaultInt    int       `default:"42"`
 }
 
 type bar struct {
@@ -316,24 +318,26 @@ func TestBind(t *testing.T) {
 		birthday, err := time.Parse("2006-01-02", "2007-12-13")
 		So(err, ShouldBeNil)
 		var a = foo{
-			ID:          1234,
-			UserName:    "jiazhoulvke",
-			Age:         50,
-			Weight:      60,
-			EnglishName: "niko",
-			Number:      "24",
-			AliasName:   "jiazhoulvke1",
-			AliasName2:  "jiazhoulvke_1",
-			Email:       "foo@bar.com",
-			LastIP:      "127.0.0.1",
-			Mobile:      "13812345678",
-			Tel:         "07551234567",
-			Phone:       "13812345678",
-			IDCard:      "43211234567890123X",
-			Height:      1.89,
-			Count:       66666,
-			IsMan:       true,
-			Birthday:    birthday,
+			ID:            1234,
+			UserName:      "jiazhoulvke",
+			Age:           50,
+			Weight:        60,
+			EnglishName:   "niko",
+			Number:        "24",
+			AliasName:     "jiazhoulvke1",
+			AliasName2:    "jiazhoulvke_1",
+			Email:         "foo@bar.com",
+			LastIP:        "127.0.0.1",
+			Mobile:        "13812345678",
+			Tel:           "07551234567",
+			Phone:         "13812345678",
+			IDCard:        "43211234567890123X",
+			Height:        1.89,
+			Count:         66666,
+			IsMan:         true,
+			Birthday:      birthday,
+			DefaultString: "foobar",
+			DefaultInt:    42,
 		}
 		err = Bind(ctx, &f)
 		So(err, ShouldBeNil)

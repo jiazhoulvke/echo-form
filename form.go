@@ -16,8 +16,10 @@ var (
 	FormFields = []string{"form", "json"}
 	//LabelFields title
 	LabelFields = []string{"title", "label", "json"}
-	//ValidField title
+	//ValidField 校验tag
 	ValidField = "valid"
+	//DefaultField 默认值tag
+	DefaultField = "default"
 )
 
 //Check 检测表单值
@@ -77,8 +79,12 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 	title := defaultField(f, LabelFields)
 	input := ctx.FormValue(defaultField(f, FormFields))
 	typeName := reflect.TypeOf(v.Interface()).String()
-	if input == "" {
+	defaultStr := f.Tag.Get(DefaultField)
+	if input == "" && defaultStr == "" {
 		return nil
+	}
+	if input == "" {
+		input = defaultStr
 	}
 	if !v.CanSet() {
 		return nil
