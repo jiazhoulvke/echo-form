@@ -21,7 +21,7 @@ echo框架的表单校验绑定库。
   只能有字母或数字
 - alphadash
   只能有字母或数字及下划线
-- name
+- username
   只能有字母或数字及下划线,且第一个字符必须为字母，最后一个字符不能为下划线
 - float
   必须为能转为浮点数的字符串
@@ -66,7 +66,7 @@ import (
 )
 
 type userInfo struct {
-	UserName  string  `valid:"required;range:8,16;name"`
+	UserName  string  `valid:"required;range:8,16;username"`
 	Password  string  `valid:"required;range:32,512"`
 	EnName    string  `valid:"alpha"`
 	Number    string  `valid:"numeric"`
