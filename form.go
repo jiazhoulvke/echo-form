@@ -182,7 +182,9 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 	} else if IsStringType(f) {
 		v.SetString(input)
 	} else if f.Type.Kind() == reflect.Bool {
-		v.SetBool(true) //凡是有值的皆为真
+		if input != "false" && input != "0" {
+			v.SetBool(true) //凡是有值的皆为真
+		}
 	} else if typeName == "time.Time" {
 		var t time.Time
 		//如果是纯数字则认为是时间戳
@@ -202,6 +204,92 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 			}
 		}
 		v.Set(reflect.ValueOf(t))
+	} else if f.Type.Kind() == reflect.Slice {
+		stringSlice := strings.Split(input, ",")
+		if len(stringSlice) == 0 {
+			return nil
+		}
+		switch f.Type.String() {
+		case "[]string":
+			slice := reflect.MakeSlice(reflect.TypeOf([]string{}), len(stringSlice), len(stringSlice))
+			for i := 0; i < len(stringSlice); i++ {
+				slice.Index(i).Set(reflect.ValueOf(stringSlice[i]))
+			}
+			v.Set(slice)
+		case "[]int", "[]uint", "[]int8", "[]uint8", "[]int16", "[]uint16", "[]int32", "[]uint32", "[]int64", "[]uint64":
+			var slice reflect.Value
+			switch f.Type.String() {
+			case "[]int":
+				slice = reflect.MakeSlice(reflect.TypeOf([]int{}), len(stringSlice), len(stringSlice))
+			case "[]uint":
+				slice = reflect.MakeSlice(reflect.TypeOf([]uint{}), len(stringSlice), len(stringSlice))
+			case "[]int8":
+				slice = reflect.MakeSlice(reflect.TypeOf([]int8{}), len(stringSlice), len(stringSlice))
+			case "[]uint8":
+				slice = reflect.MakeSlice(reflect.TypeOf([]uint8{}), len(stringSlice), len(stringSlice))
+			case "[]int16":
+				slice = reflect.MakeSlice(reflect.TypeOf([]int16{}), len(stringSlice), len(stringSlice))
+			case "[]uint16":
+				slice = reflect.MakeSlice(reflect.TypeOf([]uint16{}), len(stringSlice), len(stringSlice))
+			case "[]int32":
+				slice = reflect.MakeSlice(reflect.TypeOf([]int32{}), len(stringSlice), len(stringSlice))
+			case "[]uint32":
+				slice = reflect.MakeSlice(reflect.TypeOf([]uint32{}), len(stringSlice), len(stringSlice))
+			case "[]int64":
+				slice = reflect.MakeSlice(reflect.TypeOf([]int64{}), len(stringSlice), len(stringSlice))
+			case "[]uint64":
+				slice = reflect.MakeSlice(reflect.TypeOf([]uint64{}), len(stringSlice), len(stringSlice))
+			}
+			for i := 0; i < len(stringSlice); i++ {
+				n, err := strconv.ParseInt(stringSlice[i], 10, 64)
+				if err != nil {
+					return err
+				}
+
+				switch f.Type.String() {
+				case "[]int":
+					slice.Index(i).Set(reflect.ValueOf(int(n)))
+				case "[]uint":
+					slice.Index(i).Set(reflect.ValueOf(uint(n)))
+				case "[]int8":
+					slice.Index(i).Set(reflect.ValueOf(int8(n)))
+				case "[]uint8":
+					slice.Index(i).Set(reflect.ValueOf(uint8(n)))
+				case "[]int16":
+					slice.Index(i).Set(reflect.ValueOf(int16(n)))
+				case "[]uint16":
+					slice.Index(i).Set(reflect.ValueOf(uint16(n)))
+				case "[]int32":
+					slice.Index(i).Set(reflect.ValueOf(int32(n)))
+				case "[]uint32":
+					slice.Index(i).Set(reflect.ValueOf(uint32(n)))
+				case "[]int64":
+					slice.Index(i).Set(reflect.ValueOf(n))
+				case "[]uint64":
+					slice.Index(i).Set(reflect.ValueOf(uint64(n)))
+				}
+			}
+			v.Set(slice)
+		case "[]float32", "[]float64":
+			var slice reflect.Value
+			if f.Type.String() == "[]float64" {
+				slice = reflect.MakeSlice(reflect.TypeOf([]float64{}), len(stringSlice), len(stringSlice))
+			} else {
+				slice = reflect.MakeSlice(reflect.TypeOf([]float32{}), len(stringSlice), len(stringSlice))
+			}
+			for i := 0; i < len(stringSlice); i++ {
+				n, err := strconv.ParseFloat(stringSlice[i], 64)
+				if err != nil {
+					return err
+				}
+				if f.Type.String() == "[]float64" {
+					slice.Index(i).Set(reflect.ValueOf(n))
+				} else {
+					slice.Index(i).Set(reflect.ValueOf(float32(n)))
+				}
+			}
+			v.Set(slice)
+		}
 	}
 	return nil
 }

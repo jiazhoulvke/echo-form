@@ -498,6 +498,56 @@ func TestBind(t *testing.T) {
 			So(isEqual, ShouldBeTrue)
 		})
 
+		Convey("测试slice", func() {
+			type foo struct {
+				StringSlice  []string  `json:"string_slice"`
+				IntSlice     []int     `json:"int_slice"`
+				UIntSlice    []uint    `json:"uint_slice"`
+				Int8Slice    []int8    `json:"int8_slice"`
+				UInt8Slice   []uint8   `json:"uint8_slice"`
+				Int16Slice   []int16   `json:"int16_slice"`
+				UInt16Slice  []uint16  `json:"uint16_slice"`
+				Int32Slice   []int32   `json:"int32_slice"`
+				UInt32Slice  []uint32  `json:"uint32_slice"`
+				Int64Slice   []int64   `json:"int64_slice"`
+				UInt64Slice  []uint64  `json:"uint64_slice"`
+				Float32Slice []float32 `json:"float32_slice"`
+				Float64Slice []float64 `json:"float64_slice"`
+			}
+			data := url.Values{
+				"string_slice":  []string{"3,5,7"},
+				"int_slice":     []string{"-3,5,7"},
+				"uint_slice":    []string{"3,5,7"},
+				"int8_slice":    []string{"-3,5,7"},
+				"uint8_slice":   []string{"3,5,7"},
+				"int16_slice":   []string{"-3,5,7"},
+				"uint16_slice":  []string{"3,5,7"},
+				"int32_slice":   []string{"-3,5,7"},
+				"uint32_slice":  []string{"3,5,7"},
+				"int64_slice":   []string{"-3,5,7"},
+				"uint64_slice":  []string{"3,5,7"},
+				"float32_slice": []string{"-1.3,1.5,1.7"},
+				"float64_slice": []string{"-1.3,1.5,1.7"},
+			}
+			var f = foo{}
+			ctx := makeContext(data)
+			err := Bind(ctx, &f)
+			So(err, ShouldBeNil)
+			So(f.StringSlice, ShouldResemble, []string{"3", "5", "7"})
+			So(f.IntSlice, ShouldResemble, []int{-3, 5, 7})
+			So(f.UIntSlice, ShouldResemble, []uint{3, 5, 7})
+			So(f.Int8Slice, ShouldResemble, []int8{-3, 5, 7})
+			So(f.UInt8Slice, ShouldResemble, []uint8{3, 5, 7})
+			So(f.Int16Slice, ShouldResemble, []int16{-3, 5, 7})
+			So(f.UInt16Slice, ShouldResemble, []uint16{3, 5, 7})
+			So(f.Int32Slice, ShouldResemble, []int32{-3, 5, 7})
+			So(f.UInt32Slice, ShouldResemble, []uint32{3, 5, 7})
+			So(f.Int64Slice, ShouldResemble, []int64{-3, 5, 7})
+			So(f.UInt64Slice, ShouldResemble, []uint64{3, 5, 7})
+			So(f.Float32Slice, ShouldResemble, []float32{-1.3, 1.5, 1.7})
+			So(f.Float64Slice, ShouldResemble, []float64{-1.3, 1.5, 1.7})
+		})
+
 		Convey("测试错误的输入", func() {
 			type (
 				foo struct {
