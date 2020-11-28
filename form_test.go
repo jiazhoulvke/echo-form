@@ -576,5 +576,30 @@ func TestBind(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
+		Convey("测试time.Time", func() {
+			type foo struct {
+				Unixtime time.Time `json:"unixtime"`
+				Date     time.Time `json:"date"`
+				DateTime time.Time `json:"datetime"`
+			}
+			var f foo
+			data := url.Values{
+				"unixtime": []string{"1577894400"}, //2020-01-02
+				"date":     []string{"2020-02-03"},
+				"datetime": []string{"2020-03-05 06:07:08"},
+			}
+			ctx := makeContext(data)
+			err := Bind(ctx, &f)
+			So(err, ShouldBeNil)
+			d, _ := time.Parse(dateLayout, "2020-02-03")
+			dt, _ := time.Parse(timeLayout, "2020-03-05 06:07:08")
+			b := foo{
+				Unixtime: time.Unix(1577894400, 0),
+				Date:     d,
+				DateTime: dt,
+			}
+			So(f, ShouldResemble, b)
+		})
+
 	})
 }

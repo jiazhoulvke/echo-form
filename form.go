@@ -78,7 +78,6 @@ const (
 func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 	title := defaultField(f, LabelFields)
 	input := ctx.FormValue(defaultField(f, FormFields))
-	typeName := reflect.TypeOf(v.Interface()).String()
 	defaultStr := f.Tag.Get(DefaultField)
 	if input == "" && defaultStr == "" {
 		return nil
@@ -185,23 +184,24 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 		if input != "false" && input != "0" {
 			v.SetBool(true) //凡是有值的皆为真
 		}
-	} else if typeName == "time.Time" {
+	} else if f.Type.String() == "time.Time" {
 		var t time.Time
 		//如果是纯数字则认为是时间戳
-		n, err := strconv.ParseInt(input, 10, 64)
-		if err == nil {
+		if n, err := strconv.ParseInt(input, 10, 64); err == nil {
 			t = time.Unix(n, 0)
+			v.Set(reflect.ValueOf(t))
+			return nil
+		}
+		var err error
+		if len(input) == 10 {
+			t, err = time.Parse(dateLayout, input)
+		} else if len(input) == 19 {
+			t, err = time.Parse(timeLayout, input)
 		} else {
-			if len(input) == 10 {
-				t, err = time.Parse(dateLayout, input)
-			} else if len(input) == 19 {
-				t, err = time.Parse(timeLayout, input)
-			} else {
-				err = fmt.Errorf("格式错误")
-			}
-			if err != nil {
-				return err
-			}
+			err = fmt.Errorf("格式错误")
+		}
+		if err != nil {
+			return err
 		}
 		v.Set(reflect.ValueOf(t))
 	} else if f.Type.Kind() == reflect.Slice {
