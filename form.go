@@ -22,8 +22,39 @@ var (
 	DefaultField = "default"
 )
 
-//Check 检测表单值
+var form = NewForm()
+
+func Bind(ctx echo.Context, o interface{}) error {
+	return form.Bind(o, ctx)
+}
+
 func Check(ctx echo.Context, o interface{}) error {
+	return form.Check(o, ctx)
+}
+
+type Form struct {
+	FormFields   []string
+	LabelFields  []string
+	ValidField   string
+	DefaultField string
+}
+
+type OptionsFunc func(*Form)
+
+func NewForm(fns ...OptionsFunc) *Form {
+	form := Form{
+		FormFields:   FormFields,
+		LabelFields:  LabelFields,
+		ValidField:   ValidField,
+		DefaultField: DefaultField,
+	}
+	for _, fn := range fns {
+		fn(&form)
+	}
+	return &form
+}
+
+func (f *Form) Check(o interface{}, ctx echo.Context) error {
 	t := reflect.TypeOf(o)
 	v := reflect.ValueOf(o)
 	if t.Kind() == reflect.Ptr {
@@ -33,11 +64,55 @@ func Check(ctx echo.Context, o interface{}) error {
 	if t.Kind() != reflect.Struct {
 		return fmt.Errorf("参数必须为struct")
 	}
-	return checkStruct(t, v, ctx)
+	return f.checkStruct(t, v, ctx)
+}
+
+func (f *Form) checkStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+		if field.Type.Kind() == reflect.Struct {
+			if err := f.checkStruct(field.Type, value, ctx); err != nil {
+				return err
+			}
+		} else {
+			if err := f.checkField(field, value, ctx); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (f *Form) checkField(t reflect.StructField, v reflect.Value, ctx echo.Context) error {
+	title := defaultField(t, f.LabelFields)
+	input := ctx.FormValue(defaultField(t, f.FormFields))
+	rules := f.parseRules(t)
+	for _, r := range rules {
+		if r.Name == "" {
+			continue
+		}
+		checkFunc, ok := checkers[r.Name]
+		if !ok {
+			return fmt.Errorf("检测器%s找不到", r.Name)
+		}
+		c := Context{
+			Input:  input,
+			Title:  title,
+			Params: r.Params,
+			Field:  t,
+			Value:  v,
+			Ctx:    ctx,
+		}
+		if err := checkFunc(c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 //Bind 绑定表单值
-func Bind(ctx echo.Context, o interface{}) error {
+func (f *Form) Bind(o interface{}, ctx echo.Context) error {
 	t := reflect.TypeOf(o)
 	v := reflect.ValueOf(o)
 	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
@@ -46,10 +121,10 @@ func Bind(ctx echo.Context, o interface{}) error {
 	} else {
 		return fmt.Errorf("参数必须为struct的指针")
 	}
-	return bindStruct(t, v, ctx)
+	return f.bindStruct(t, v, ctx)
 }
 
-func bindStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
+func (f *Form) bindStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		value := v.Field(i)
@@ -58,11 +133,11 @@ func bindStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
 			typeName = reflect.TypeOf(value.Interface()).String()
 		}
 		if field.Type.Kind() == reflect.Struct && typeName != "time.Time" {
-			if err := bindStruct(field.Type, value, ctx); err != nil {
+			if err := f.bindStruct(field.Type, value, ctx); err != nil {
 				return err
 			}
 		} else {
-			if err := bindField(field, value, ctx); err != nil {
+			if err := f.bindField(field, value, ctx); err != nil {
 				return err
 			}
 		}
@@ -75,10 +150,10 @@ const (
 	timeLayout = "2006-01-02 15:04:05"
 )
 
-func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
-	title := defaultField(f, LabelFields)
-	input := ctx.FormValue(defaultField(f, FormFields))
-	defaultStr := f.Tag.Get(DefaultField)
+func (f *Form) bindField(field reflect.StructField, v reflect.Value, ctx echo.Context) error {
+	title := defaultField(field, f.LabelFields)
+	input := ctx.FormValue(defaultField(field, f.FormFields))
+	defaultStr := field.Tag.Get(f.DefaultField)
 	if input == "" && defaultStr == "" {
 		return nil
 	}
@@ -88,13 +163,13 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 	if !v.CanSet() {
 		return nil
 	}
-	if IsIntType(f) {
-		if IsUintType(f) {
+	if IsIntType(field) {
+		if IsUintType(field) {
 			value, err := strconv.ParseUint(input, 10, 64)
 			if err != nil {
 				return fmt.Errorf("%s必须为整数", title)
 			}
-			switch f.Type.Kind() {
+			switch field.Type.Kind() {
 			case reflect.Uint:
 				if strconv.IntSize == 32 {
 					if value > math.MaxUint32 {
@@ -125,7 +200,7 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 			if err != nil {
 				return fmt.Errorf("%s必须为整数", title)
 			}
-			switch f.Type.Kind() {
+			switch field.Type.Kind() {
 			case reflect.Int:
 				if strconv.IntSize == 32 {
 					if value > math.MaxInt32 {
@@ -164,12 +239,12 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 				v.Set(reflect.ValueOf(value))
 			}
 		}
-	} else if IsFloatType(f) {
+	} else if IsFloatType(field) {
 		value, err := strconv.ParseFloat(input, 64)
 		if err != nil {
 			return fmt.Errorf("%s必须为浮点数", title)
 		}
-		switch f.Type.Kind() {
+		switch field.Type.Kind() {
 		case reflect.Float32:
 			if value > math.MaxFloat32 {
 				return fmt.Errorf("%s的数值越界", title)
@@ -178,13 +253,13 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 		case reflect.Float64:
 			v.Set(reflect.ValueOf(value))
 		}
-	} else if IsStringType(f) {
+	} else if IsStringType(field) {
 		v.SetString(input)
-	} else if f.Type.Kind() == reflect.Bool {
+	} else if field.Type.Kind() == reflect.Bool {
 		if input != "false" && input != "0" {
 			v.SetBool(true) //凡是有值的皆为真
 		}
-	} else if f.Type.String() == "time.Time" {
+	} else if field.Type.String() == "time.Time" {
 		var t time.Time
 		//如果是纯数字则认为是时间戳
 		if n, err := strconv.ParseInt(input, 10, 64); err == nil {
@@ -204,12 +279,12 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 			return err
 		}
 		v.Set(reflect.ValueOf(t))
-	} else if f.Type.Kind() == reflect.Slice {
+	} else if field.Type.Kind() == reflect.Slice {
 		stringSlice := strings.Split(input, ",")
 		if len(stringSlice) == 0 {
 			return nil
 		}
-		switch f.Type.String() {
+		switch field.Type.String() {
 		case "[]string":
 			slice := reflect.MakeSlice(reflect.TypeOf([]string{}), len(stringSlice), len(stringSlice))
 			for i := 0; i < len(stringSlice); i++ {
@@ -218,7 +293,7 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 			v.Set(slice)
 		case "[]int", "[]uint", "[]int8", "[]uint8", "[]int16", "[]uint16", "[]int32", "[]uint32", "[]int64", "[]uint64":
 			var slice reflect.Value
-			switch f.Type.String() {
+			switch field.Type.String() {
 			case "[]int":
 				slice = reflect.MakeSlice(reflect.TypeOf([]int{}), len(stringSlice), len(stringSlice))
 			case "[]uint":
@@ -246,7 +321,7 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 					return err
 				}
 
-				switch f.Type.String() {
+				switch field.Type.String() {
 				case "[]int":
 					slice.Index(i).Set(reflect.ValueOf(int(n)))
 				case "[]uint":
@@ -272,7 +347,7 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 			v.Set(slice)
 		case "[]float32", "[]float64":
 			var slice reflect.Value
-			if f.Type.String() == "[]float64" {
+			if field.Type.String() == "[]float64" {
 				slice = reflect.MakeSlice(reflect.TypeOf([]float64{}), len(stringSlice), len(stringSlice))
 			} else {
 				slice = reflect.MakeSlice(reflect.TypeOf([]float32{}), len(stringSlice), len(stringSlice))
@@ -282,57 +357,13 @@ func bindField(f reflect.StructField, v reflect.Value, ctx echo.Context) error {
 				if err != nil {
 					return err
 				}
-				if f.Type.String() == "[]float64" {
+				if field.Type.String() == "[]float64" {
 					slice.Index(i).Set(reflect.ValueOf(n))
 				} else {
 					slice.Index(i).Set(reflect.ValueOf(float32(n)))
 				}
 			}
 			v.Set(slice)
-		}
-	}
-	return nil
-}
-
-func checkStruct(t reflect.Type, v reflect.Value, ctx echo.Context) error {
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		value := v.Field(i)
-		if field.Type.Kind() == reflect.Struct {
-			if err := checkStruct(field.Type, value, ctx); err != nil {
-				return err
-			}
-		} else {
-			if err := checkField(field, value, ctx); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func checkField(t reflect.StructField, v reflect.Value, ctx echo.Context) error {
-	title := defaultField(t, LabelFields)
-	input := ctx.FormValue(defaultField(t, FormFields))
-	rules := parseRules(t)
-	for _, r := range rules {
-		if r.Name == "" {
-			continue
-		}
-		checkFunc, ok := checkers[r.Name]
-		if !ok {
-			return fmt.Errorf("检测器%s找不到", r.Name)
-		}
-		c := Context{
-			Input:  input,
-			Title:  title,
-			Params: r.Params,
-			Field:  t,
-			Value:  v,
-			Ctx:    ctx,
-		}
-		if err := checkFunc(c); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -357,9 +388,9 @@ type rule struct {
 	Params []string
 }
 
-func parseRules(t reflect.StructField) []rule {
+func (f *Form) parseRules(t reflect.StructField) []rule {
 	rules := make([]rule, 0, 4)
-	valid := t.Tag.Get(ValidField)
+	valid := t.Tag.Get(f.ValidField)
 	for _, r := range strings.Split(valid, ";") {
 		if strings.Contains(r, ":") {
 			rl := strings.SplitN(r, ":", 2)
