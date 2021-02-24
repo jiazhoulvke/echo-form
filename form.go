@@ -22,16 +22,19 @@ var (
 	DefaultField = "default"
 )
 
-var form = NewForm()
+var form = New()
 
+//Bind 绑定数据
 func Bind(ctx echo.Context, o interface{}) error {
 	return form.Bind(o, ctx)
 }
 
+//Check 检测数据
 func Check(ctx echo.Context, o interface{}) error {
 	return form.Check(o, ctx)
 }
 
+//Form form
 type Form struct {
 	FormFields   []string
 	LabelFields  []string
@@ -39,9 +42,11 @@ type Form struct {
 	DefaultField string
 }
 
+//OptionsFunc 设置
 type OptionsFunc func(*Form)
 
-func NewForm(fns ...OptionsFunc) *Form {
+//New new form
+func New(fns ...OptionsFunc) *Form {
 	form := Form{
 		FormFields:   FormFields,
 		LabelFields:  LabelFields,
@@ -54,6 +59,7 @@ func NewForm(fns ...OptionsFunc) *Form {
 	return &form
 }
 
+//Check 检测数据
 func (f *Form) Check(o interface{}, ctx echo.Context) error {
 	t := reflect.TypeOf(o)
 	v := reflect.ValueOf(o)
